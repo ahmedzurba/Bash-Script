@@ -1,0 +1,294 @@
+#!/bin/bash
+
+#Author : Ahmed Zurba
+
+#add()----------------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+add(){
+local answer=0
+for sum in $@
+do
+let answer=$answer+$sum
+done
+echo $answer
+}
+#subtract()-----------------------------------------------#
+#input : more than 1 integer
+#integers output : on integer as answer
+#---------------------------------------------------------#
+subtract(){
+local answer=0
+local index=1
+for sub in $@
+do
+[ $index -eq 1 ] && answer=$sub && ((index++)) || let answer=$answer-$sub  #first time assign the first element to answer
+done
+echo $answer
+}
+#multiply()-----------------------------------------------#
+#input : more than 1  integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+multiply(){
+local answer=1
+for mult in $@
+do
+let answer=$answer*$mult
+done
+echo $answer
+}
+#divide()-------------------------------------------------#
+#input : more than 1 integer after the secound not zero
+#integers output : on integer as answer
+#---------------------------------------------------------#
+divide(){
+local answer=0
+local index=1
+for div in $@
+do
+#[ $div -eq 0 ] && [ $index -gt 1 ] &&  exit 1 
+[ $index -eq 1 ] && answer=$div && ((index++)) || let answer=$answer/$div  #first time assign the first element to answer
+done
+echo $answer
+}
+#power_of()-----------------------------------------------#
+#input : more than 1 integer
+#integers output : on integer as answer
+#---------------------------------------------------------#
+power_of(){
+local answer=1
+local index=1
+for power in $@  # big loop
+do
+ if [ $index -eq 1 ] 
+ then
+  answer=$power
+  ((index++))
+ elif [ $power -eq 0 ]
+ then
+  answer=1
+ else 
+  local count=1
+  while [ $count -lt $power ] # small loop
+  do
+   let answer=$answer*$answer
+   echo $answer
+   let count=$count+1
+  done
+  if [ $power -lt 0 ]
+  then
+   let answer=1/$answer
+  fi
+ fi
+done
+
+echo $answer
+}
+#modulus()------------------------------------------------#
+#input : more than 1 integer
+#integers output : on integer as answer
+#---------------------------------------------------------#
+modulus(){
+local answer=0
+for mod in $@
+do
+let answer=$answer%$mod
+done
+echo $answer
+}
+
+#is_prime()-----------------------------------------------#
+# input	: 1 number
+# output: echo is prime or echo is not prime
+#---------------------------------------------------------#
+is_prime(){
+local number=$1
+if [[ $number -lt 2 ]]
+then
+  echo "$number is not a prime number"
+  return 0
+else
+  local i=2
+  while [ $i -lt $number ] # i is al number less than our test number
+  do
+         if [[ `expr $number % $i` -eq 0 ]] #if the number divdable by any number less the it then it is not prime
+         then
+            echo "$number is not a prime"
+            return 0
+       fi
+  let i=$i+1
+ done
+fi
+echo "$number is a prime"
+}
+#is_odd_even()--------------------------------------------#
+# input  : 1 number
+# output : echo odd or echo even
+#---------------------------------------------------------#
+is_odd_even(){
+local number=$1
+if [ $((number%2)) -eq 0 ]
+then
+echo "$number is even number"
+else
+echo "$number is odd number"
+fi
+}
+#is_div_by_five()-----------------------------------------#
+# input  : 1 number
+# output : echo dividable or echo not dividable
+#---------------------------------------------------------#
+is_div_by_five(){
+local number=$1
+if (( $number % 5==0 ))
+  then
+      echo "$number is dividable by 5"
+   else
+      echo "$number is not dividable by 5"
+  fi
+}
+
+#display()------------------------------------------------#
+#this function get the answer and display it and another three options
+#input  : 1 number as answer
+#output : print on the display 
+#used_function :is_prime() & is_odd_even() & is_div_by_five()
+#---------------------------------------------------------#
+display(){
+local answer=$1
+echo
+echo the answer is $answer
+is_prime $answer
+is_odd_even $answer
+is_div_by_five $answer
+echo
+}
+
+#calculate()----------------------------------------------#
+#function that get two numbers and one operatoras number then use other functions to calculate
+#input  : multiple integers, first argument operator , after  inputs numbers 
+#output : 1 number as answer
+#used_function : add() & subtract() & multiply() & divide() & power_of() modulus_%()
+#---------------------------------------------------------#
+calculate() {
+local operator=$1
+local numbers=$(echo $@ | cut -d" " -f 2-)
+#echo $numbers 
+#local num1=$2
+#local num2=$3
+case $operator in
+        1)
+        add $numbers
+        ;;
+        2)
+        subtract $numbers
+        ;;
+        3)
+        multiply $numbers
+        ;;
+        4)
+        divide $numbers
+        ;;
+        5)
+        power_of $numbers
+        ;;
+        6)
+        modulus $numbers
+        ;;
+esac
+}
+#input()--------------------------------------------------#
+#funcation that ask the user for two integers (can be positive or negative) and validate the input
+#validation : not zero or one input , the inputs are positive or negative integers 
+#input      : multiple  numbers , one argument and several integers
+#outbut     : excute display or ask the user to insert again
+#used_functions : display
+#---------------------------------------------------------#
+input () {
+local re='^[+-]?[0-9]+$'
+local operator=$1
+local tester=1
+while [[ $tester -eq 1 ]]
+do
+	tester=2
+	echo -n "please enter 2 numbers " 
+	read -a arr_num
+	 if [ ${#arr_num[@]} -lt 2 ]
+         then
+	      tester=1
+         echo "please enter at least 2 arguments "
+	 echo
+	 else # test the array members
+		for num in ${arr_num[@]}
+		do
+		if  [[ ! $num =~ $re ]] 
+		then
+		tester=1
+		fi
+		done
+	 [ $tester -eq 1 ] && echo -e "please enter integer only\n"
+	fi
+done
+#echo ${arr_num[@]}
+display $(calculate $operator ${arr_num[@]})
+}
+
+
+
+
+#menu()---------------------------------------------------#
+#funcation that display menu for the user to select an operation
+#input  : None
+#output : display()
+#usedfunctions: input() 
+#---------------------------------------------------------#
+function menu() {
+# list of argumment to create list
+ select menu_answer in Add Subtract Multiply Divide Power_of Modulos Exit
+ do
+ local action=0;
+#what every argumment in the list do
+  case $menu_answer in
+     Add)
+     action=1
+     echo "$menu_answer selected"
+     ;;
+     Subtract)
+     action=2
+     echo "$menu_answer selected"
+     ;;
+     Multiply)
+     action=3
+     echo "$menu_answer selected"
+     ;;
+     Divide)
+     action=4
+     echo "$menu_answer selected"
+     ;;
+     Power_of)
+     action=5
+     echo  "$menu_answer selected"
+     ;;
+     Modulos)
+     action=6
+     echo  "$menu_answer selected"
+     ;;
+     Exit)
+     exit 1
+     ;;
+     *)
+     echo -e "Try again, your input should be between 1-7\n1) Add\n2) Subtract\n3) Multiply\n4) Divide\n5) Power_of\n6) Modulos\n7) Exit "
+     ;;
+  esac
+     [ $action -ne 0 ] 	&& input $action 	 #needed  to skip if case is *
+
+ done
+}
+#---------------------------------------------------------#
+#drive
+
+menu
+
+

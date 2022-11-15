@@ -1,0 +1,251 @@
+#!/bin/bash
+
+#Author  : Ahmed Zurba
+#Date    : 20/7/2022
+
+#add()----------------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+add(){
+local answer=$(($1+$2))
+echo $answer
+}
+#subtract()-----------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+subtract(){
+let answer=$1-$2
+echo $answer
+}
+#multiply()-----------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+multiply(){
+local answer=$(($1*$2))
+echo $answer
+}
+#divide()-------------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+divide(){
+[ $1 -eq 0 ] && echo "cannot divide by zero!!" && exit 1
+local answer=$(($1/$2))
+echo $answer
+}
+#power_of()-----------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+power_of(){
+#local base=$1
+#local answer=$base
+#local power=$2
+#local index=1
+#while [ $index -lt $power ]
+#do
+#let answer=$answer*$base
+#let index=$index+1
+#done
+#if [ $power -eq 0 ]
+#then
+#answer=1
+#elif [ $power -lt 0 ]
+#then
+#let answer=1/$answer
+#fi
+local answer=$(($1**$2))
+echo $answer
+}
+#modulus()------------------------------------------------#
+#input : two integers
+#integers output : on integer as answer
+#---------------------------------------------------------#
+modulus(){
+local answer=$(($1%$2))
+echo $answer
+}
+ 
+#is_prime()-----------------------------------------------#
+# input	: 1 number
+# output: echo is prime or echo is not prime
+#---------------------------------------------------------#
+is_prime(){
+local number=$1
+if [[ $number -lt 2 ]]
+then
+  echo "$number is not a prime number"
+  return 0
+else
+  local i=2
+  while [ $i -lt $number ] # i is al number less than our test number
+  do
+         if [[ `expr $number % $i` -eq 0 ]] #if the number divdable by any number less the it then it is not prime
+         then
+            echo "$number is not a prime"
+            return 0
+       fi
+  let i=$i+1
+ done
+fi
+echo "$number is a prime"
+}
+#is_odd_even()--------------------------------------------#
+# input  : 1 number
+# output : echo odd or echo even
+#---------------------------------------------------------#
+is_odd_even(){
+local number=$1
+if [ $((number%2)) -eq 0 ]
+then
+echo "$number is even number"
+else
+echo "$number is odd number"
+fi
+}
+#is_div_by_five()-----------------------------------------#
+# input  : 1 number
+# output : echo dividable or echo not dividable
+#---------------------------------------------------------#
+is_div_by_five(){
+local number=$1
+if (( $number % 5==0 ))
+  then
+      echo "$number is dividable by 5"
+   else
+      echo "$number is not dividable by 5"
+  fi
+}
+
+#display()------------------------------------------------#
+#this function get the answer and display it and another three options
+#input  : 1 number as answer
+#output : print on the display 
+#used_function :is_prime() & is_odd_even() & is_div_by_five()
+#---------------------------------------------------------#
+display(){
+local answer=$1
+echo
+echo the answer is $answer
+is_prime $answer
+is_odd_even $answer
+is_div_by_five $answer
+echo
+}
+
+#calculate()----------------------------------------------#
+#function that get two numbers and one operatoras number then use other functions to calculate
+#input  : 3 integers, first argument operator , secound and third inputs numbers 
+#output : 1 number as answer
+#used_function : add() & subtract() & multiply() & divide() & power_of() modulus_%()
+#---------------------------------------------------------#
+calculate() {
+local operator=$1
+local num1=$2
+local num2=$3
+case $operator in
+        1)
+        add $num1 $num2
+        ;;
+        2)
+        subtract $num1 $num2
+        ;;
+        3)
+        multiply $num1 $num2
+        ;;
+        4)
+        divide $num1 $num2
+        ;;
+        5)
+        power_of $num1 $num2
+        ;;
+        6)
+        modulus $num1 $num2
+        ;;
+esac
+}
+#input()--------------------------------------------------#
+#funcation that ask the user for two integers (can be positive or negative) and validate the input
+#validation : two inputs, the inputs are positive or negative integers 
+#input      : three  numbers , one argument and two inputs
+#outbut     : excute display or ask the user to insert again
+#used_functions : display
+#---------------------------------------------------------#
+input () {
+local re='^[+-]?[0-9]+$'
+local cont=1
+local operator=$1
+while [[ $cont -eq 1 ]]
+do
+read -p "please enter 2 numbers " num1 num2
+        if [[ -z $num1 ]] || [[ -z $num2 ]]
+        then
+        echo "please enter 2 arguments "
+		elif [[ ! $num1 =~ $re ]] || [[ ! $num2 =~ $re ]]
+        then
+			echo "please enter integers only" 		
+        else
+        	let cont=$cont+1
+		fi
+done
+display $(calculate $operator $num1 $num2)
+}
+
+#menu()---------------------------------------------------#
+#funcation that display menu for the user to select an operation
+#input  : None
+#output : display()
+#usedfunctions: input() 
+#---------------------------------------------------------#
+function menu() {
+# list of argumment to create list
+ select menu_answer in Add Subtract Multiply Divide Power_of Modulos Exit
+ do
+ local action=0;
+#what every argumment in the list do
+  case $menu_answer in
+     Add)
+     action=1
+     echo "$menu_answer selected"
+     ;;
+     Subtract)
+     action=2
+     echo "$menu_answer selected"
+     ;;
+     Multiply)
+     action=3
+     echo "$menu_answer selected"
+     ;;
+     Divide)
+     action=4
+     echo "$menu_answer selected"
+     ;;
+     Power_of)
+     action=5
+     echo  "$menu_answer selected"
+     ;;
+     Modulos)
+     action=6
+     echo  "$menu_answer selected"
+     ;;
+     Exit)
+     exit 1
+     ;;
+     *)
+     echo -e "Try again, your input should be between 1-7\n1) Add\n2) Subtract\n3) Multiply\n4) Divide\n5) Power_of\n6) Modulos\n7) Exit "
+     ;;
+  esac
+  [ $action -ne 0 ] && input $action	 #needed  to skip if case is *
+  
+ #display $(input)
+ done
+}
+#---------------------------------------------------------#
+#drive
+
+menu
+
+ 
