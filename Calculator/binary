@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#Author  : Ahmed Zurba
+
+dec_to_binary(){
+local decimal=$1
+local mod=1
+if [ $decimal -eq 0 ]
+then
+binary=0
+fi
+while [ $decimal -ne 0 ]
+do
+let mod=$decimal%2
+let decimal=$decimal/2
+binary="$mod $binary"
+done
+echo $binary
+}
+dec_to_binary 1092
+
