@@ -1,0 +1,466 @@
+#!/bin/bash
+#Date	: 13/8/2022
+#Author : Ahmed Zurba
+
+#print_log()------------------------------------------------------------#
+# Help function
+# This function gets the  functipn name and the state then create log and print it to the log file
+# input		: record_file_name , command_type and state 
+# output	: prints new log entry in log file
+#-----------------------------------------------------------------------#
+print_log(){
+local command_type=$1
+local state=$2
+local record_file_name=$3
+[ $state -eq 0 ] && state="Success" || state="Failure"
+echo "$(date "+%d/%m/%Y %X") $command_type $state " >> "${record_file_name}_log"
+}
+#is_number()------------------------------------------------------------#
+# Help function
+# This function test the argument if it is number
+# input		: number
+# output	: if number returns 0 else return 1
+#-----------------------------------------------------------------------#
+is_number(){
+local argu=$1
+number_regex=^[0-9]+$
+if [[ $argu =~ $number_regex ]]
+then
+ return 0
+else
+ return 1
+fi
+}
+#is_correct_record_name()-----------------------------------------------#
+# Help function
+# This function test the argument if it  is correct record name
+# input		: record_name
+# output	: if correct record_name returns 0 else return 1
+#-----------------------------------------------------------------------#
+is_correct_record_name(){
+local argu=$1
+record_name_regex=^[0-9a-zA-Z]+$
+if [[ $argu =~ $record_name_regex ]]
+then
+ return 0
+else
+ return 1
+fi
+}
+#search_for_record()----------------------------------------------------#
+# Help function
+# This function finds the match string or substring with the record name 
+# input		: record_name record_file_name 
+# output	: echo list of matched strings
+#-----------------------------------------------------------------------#
+search_for_record(){
+local record_name=$1
+local record_file_name=$2
+local list_of_lines=$(cat $record_file_name | grep -n $record_name) #function search() db_file_name record_name
+echo $list_of_lines
+}
+#print_menu()-----------------------------------------------------------#
+# Help function
+# This function prints a list of strings into numbered list 
+# input		: string contine list of strings
+# output	: echo numbered list looks as menu
+#-----------------------------------------------------------------------#
+print_menu(){
+local list_of_lines=$@
+menu_index=0
+for line in $list_of_lines
+do
+echo "$menu_index) $(echo $line | cut -d: -f2 | cut -d, -f1)"
+let menu_index=$menu_index+1
+done
+}
+#set_name()------------------------------------------------------------#
+# Help function
+# This function changes the name of a record 
+# input		: new_record_name ,line_number and record_file_name 
+# output	: none
+#----------------------------------------------------------------------#
+set_name(){
+local new_name=$1
+local line_number=$2
+local record_file_name=$3
+local comma_regex=.*,
+sed -i "${line_number}s/$comma_regex/$new_name,/" $record_file_name
+}
+#set_amount()-------------------------------------------------------------#
+# Help function
+# This function changes the amount of a record 
+# input		: new_amount ,line_number and record_file_name
+# output	: none
+#----------------------------------------------------------------------#
+set_amount(){
+local new_amount=$1
+local line_number=$2
+local record_file_name=$3
+local comma_regex=,.*
+sed -i "${line_number}s/$comma_regex/,$new_amount/" $record_file_name #set_amount
+}
+#insert()--------------------------------------------------------------#
+#this function inserts new record to the database or update an exist record
+#input   : record_file_name
+#output	 : change or add record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_amount()
+#---------------------------#
+insert(){
+local command_name="Insert"
+local State=1
+local record_file_name=$1
+local record_name=",,"
+local extra_amount="aa"
+#validation
+while ! is_correct_record_name $record_name || ! is_number $extra_amount 
+do
+read -p "Type record name : " record_name
+read -p "Type the amount : " extra_amount
+if ! is_correct_record_name $record_name
+then
+ echo
+ echo "record name cannot be empty and contains only letters or number!!"
+ echo
+fi
+ if ! is_number $extra_amount
+ then
+  echo
+  echo "you should type correct amount (only numbers)!!"
+  echo
+ fi
+done
+#find match string -----------------------------------------------------#
+local list_of_lines=($(search_for_record $record_name $record_file_name))
+if [ ${#list_of_lines[@]} -eq 0 ]
+then
+ echo "$record_name,$extra_amount" >> $record_file_name
+ State=0
+else
+ #print menu and get request---------------------------------------------#
+ local menu_index=${#list_of_lines[@]}
+ local user_choice=-1
+ while ! is_number $user_choice || [ $user_choice -lt 0 ] || [ $user_choice -gt $menu_index ]
+ do
+  print_menu ${list_of_lines[@]}
+  echo "$menu_index) -new entry-"
+  read -p "type number corrossponed to your choice : " user_choice
+ done
+ #update amount or add new entry-----------------------------------------#
+ if [ $user_choice -eq $menu_index ]
+ then
+  echo "$record_name,$extra_amount" >> $record_file_name
+  State=0
+ else
+  local target_line=$(echo ${list_of_lines[$user_choice]} | cut -d: -f1 )		 #get_line_number
+  local old_amount=$(echo ${list_of_lines[$user_choice]} | cut -d: -f2 | cut -d, -f2)	 #get_amount
+  local new_amount=0
+  let new_amount=$old_amount+$extra_amount
+  set_amount $new_amount $target_line $record_file_name
+  State=0
+ fi
+fi
+[ $State -eq 0 ] && echo "data inserted successfully" || echo "data insertion failed"
+print_log $command_name $State $record_file_name
+}
+#delete()--------------------------------------------------------------#
+#this function search fo record then modify the amount or delete the record
+#input   : record_file_name
+#output	 : change or delete record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_amount()
+#----------------------------------------------------------------------#
+delete(){
+local command_name="Delete"
+local State=1
+local record_file_name=$1
+local record_name=",,"
+local extra_amount="aa"
+#validation
+while ! is_correct_record_name $record_name || ! is_number $extra_amount 
+do
+read -p "Type record name : " record_name
+read -p "Type the amount : " extra_amount
+if ! is_correct_record_name $record_name
+then
+ echo
+ echo  "record name can not be empty and contain only letters or number!!"
+ echo
+fi
+ if ! is_number $extra_amount
+ then
+  echo
+  echo "you should type correct amount (only numbers)!!"
+  echo
+ fi
+done
+#find match string -----------------------------------------------------#
+local list_of_lines=($(search_for_record $record_name $record_file_name))
+if [ ${#list_of_lines[@]} -eq 0 ]
+then
+  echo "Error there is no such record!"
+  State=1
+else
+ #print menu and get request---------------------------------------------#
+ local menu_index=${#list_of_lines[@]}
+ local user_choice=-1
+ while ! is_number $user_choice || [ $user_choice -lt 0 ] || [ $user_choice -ge $menu_index ]
+ do
+  print_menu ${list_of_lines[@]}
+  read -p "type number corrossponed to your choice : " user_choice
+ done
+ #update amount or delete entry-----------------------------------------#
+  local target_line=$(echo ${list_of_lines[$user_choice]} | cut -d: -f1 )		 #get_line_number
+  local old_amount=$(echo ${list_of_lines[$user_choice]} | cut -d: -f2 | cut -d, -f2)	 #get_amount
+  local new_amount=0
+  let new_amount=$old_amount-$extra_amount
+  if [ $new_amount -eq 0 ]
+  then
+   sed -i "$target_line"'d' $record_file_name
+   State=0
+  elif [ $new_amount -lt 0 ]
+  then
+   echo "Error the amount cannot be under zero!!" 
+  else
+   set_amount $new_amount $target_line $record_file_name
+   State=0
+  fi
+fi
+[ $State -eq 0 ] && echo "data deleted successfully" || echo "data deletion failed"
+print_log $command_name $State $record_file_name
+}
+#search()--------------------------------------------------------------#
+#this function
+#input   : record_file_name
+#output	 : change or add record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_amount()
+#---------------------------#
+search(){
+local command_name="Search"
+local State=1
+local record_file_name=$1
+local record_name=",,"
+#validation
+while ! is_correct_record_name $record_name  
+do
+ read -p "Type record name : " record_name
+ if ! is_correct_record_name $record_name
+ then
+  echo
+  echo "you should type correct amount (only numbers)!!"
+  echo
+ fi
+done
+#find match string -----------------------------------------------------#
+local list_of_lines=($(cat $record_file_name | grep $record_name | sort ))
+if [ ${#list_of_lines[@]} -eq 0 ]
+then
+  echo "Error there is no such record!"
+  State=1
+else
+ for line in ${list_of_lines[@]}
+ do 
+  echo $line
+ done
+ State=0
+fi
+print_log $command_name $State $record_file_name
+}
+#updat_name()------------------------------------------------------------#
+#this function
+#input   : record_file_name
+#output	 : change or add record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_name()
+#------------------------------------------------------------------------#
+update_name(){
+local command_name="UpdateName"
+local State=1
+local record_file_name=$1
+local record_name=",,"
+local new_name=",,"
+#validation
+while ! is_correct_record_name $record_name || ! is_correct_record_name $new_name
+do
+read -p "Type old record name : " record_name
+read -p "Type new record name : " new_name
+
+if ! is_correct_record_name $record_name || ! is_correct_record_name $new_name
+ then
+  echo
+  echo  "record name can not be empty and contain only letters or number!!"
+  echo
+ fi
+done
+#find match string -----------------------------------------------------#
+local list_of_lines=($(search_for_record $record_name $record_file_name))
+if [ ${#list_of_lines[@]} -eq 0 ]
+then
+  echo "Error there is no such record!"
+  State=1
+else
+ #print menu and get request---------------------------------------------#
+ local menu_index=${#list_of_lines[@]}
+ local user_choice=-1
+ while ! is_number $user_choice || [ $user_choice -lt 0 ] || [ $user_choice -ge $menu_index ]
+ do
+  print_menu ${list_of_lines[@]}
+  read -p "type number corrossponed to your choice : " user_choice
+ done
+ #update name -----------------------------------------------------------#
+  local target_line=$(echo ${list_of_lines[$user_choice]} | cut -d: -f1 )		 #get_line_number
+  set_name $new_name $target_line $record_file_name
+  State=0
+fi
+[ $State -eq 0 ] && echo "record name updated successfully" || echo "record name update failed"
+print_log $command_name $State $record_file_name
+}
+#updat_amount()----------------------------------------------------------#
+#this function
+#input   : record_file_name
+#output	 : change or add record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_amount()
+#------------------------------------------------------------------------#
+update_amount(){
+local command_name="UpdateAmount"
+local State=1
+local record_file_name=$1
+local record_name=",,"
+local extra_amount="aa"
+#validation
+while ! is_correct_record_name $record_name || ! is_number $extra_amount || [ $extra_amount -eq 0 ]
+do
+read -p "Type record name : " record_name
+read -p "Type the new amount : " extra_amount
+
+if ! is_correct_record_name $record_name
+then
+ echo
+ echo  "record name can not be empty and contain only letters or number!!"
+ echo
+fi
+ if ! is_number $extra_amount || [ $extra_amount -eq 0 ]
+ then
+  echo
+  echo "you should type correct amount (only numbers ,no zero, no minus)!!"
+  echo
+ fi
+done
+#find match string -----------------------------------------------------#
+local list_of_lines=($(search_for_record $record_name $record_file_name))
+if [ ${#list_of_lines[@]} -eq 0 ]
+then
+ echo "Error there is no such record!"
+ State=1
+else
+ #print menu and get request---------------------------------------------#
+ local menu_index=${#list_of_lines[@]}
+ local user_choice=-1
+ while ! is_number $user_choice || [ $user_choice -lt 0 ] || [ $user_choice -ge $menu_index ]
+ do
+  print_menu ${list_of_lines[@]}
+  read -p "type number corrossponed to your choice : " user_choice
+ done
+ #update amount ------------------------------------------------#
+ local target_line=$(echo ${list_of_lines[$user_choice]} | cut -d: -f1 )		 #get_line_number
+ local new_amount=$extra_amount
+ set_amount $new_amount $target_line $record_file_name
+ State=0
+fi
+[ $State -eq 0 ] && echo "record amount updated successfully" || echo "record amount update failed"
+print_log $command_name $State $record_file_name
+}
+#updat_amount()----------------------------------------------------------#
+#this function
+#input   : record_file_name
+#output	 : change or add record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_amount()
+#------------------------------------------------------------------------#
+print_amount(){
+local command_name="PrintAmount"
+local State=1
+local record_file_name=$1
+local sum=0
+local number=0
+local list_just_numbers=$(cat $record_file_name | cut -d , -f 2)
+if [ ! -s $record_file_name ]
+then
+ echo "Error there is no records !"
+else
+ for num1 in $list_just_numbers
+ do
+  let sum=$sum+$num1
+ done
+ if [ $sum -eq 0 ]
+ then
+  echo "The tatal Amount equals zero !!"
+ else
+  echo "The toatal sum = $sum"
+  State=0
+ fi
+fi
+print_log $command_name $State $record_file_name
+}
+#updat_amount()----------------------------------------------------------#
+#this function
+#input   : record_file_name
+#output	 : change or add record then print_log in log_file
+#used functions : print_menu() search_for_record() is_correct_record_name() is_number() print_log() set_amount()
+#------------------------------------------------------------------------#
+print_all(){
+local command_name="PrintAll"
+local State=1
+local record_file_name=$1
+local stamp="$(date "+%d/%m/%Y %X ")$command_name "
+cat $record_file_name | sort | sed "s/,/ /" | sed "s|^|$stamp|" >> "${record_file_name}_log" 
+}
+
+
+menu(){
+ [ $# -eq 0 ] && echo you should type record_file_name as argument && exit 1
+local record_file_name=$1
+ [ ! -f $record_file_name ] && echo " there is no such file " && exit 1
+ 
+ select menu_answer in Insert Delete Search UpdateName UpdateAmount PrintAmount PrintAll Exit
+ do
+#what every argumment in the list do
+  case $menu_answer in
+     Insert)
+     echo "$menu_answer selected"
+     insert $record_file_name
+     ;;
+     Delete)
+     echo "$menu_answer selected"
+     delete $record_file_name
+     ;;
+     Search)
+     echo "$menu_answer selected"
+     search $record_file_name
+     ;;
+     UpdateName)
+     echo "$menu_answer selected"
+     update_name $record_file_name
+     ;;
+     UpdateAmount)
+     echo  "$menu_answer selected"
+     update_amount $record_file_name
+     ;;
+     PrintAmount)
+     echo  "$menu_answer selected"
+     print_amount $record_file_name
+     ;;
+     PrintAll)
+     print_all $record_file_name
+     ;;
+     Exit)
+     exit 0
+     ;;
+     *)
+     echo
+     echo  "Try again, your input should be between 1-8"
+     ;;
+  esac
+ echo -e  "1)Insert\n2)Delete\n3)Search\n4)UpdateName\n5)UpdateAmount\n6)PrintAmount\n7)PrintAll\n8)Exit"
+ done
+
+}
+
+menu $1
